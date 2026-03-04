@@ -1,20 +1,33 @@
 package task9;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
         CustomList<String> testList = new CustomList<>();
-        testList.add("a");
-        testList.add("b");
-        testList.add("c");
 
         test(testList);
         System.out.println("любые перегрузки метода add вызывались (в сумме) " + testList.getAddCount() + " раз/раза");
+
+        AddCounterHandler handler = new AddCounterHandler(testList);
+        List<String> proxyList = (List<String>) Proxy.newProxyInstance(
+                List.class.getClassLoader(),
+                new Class[]{List.class},
+                handler
+        );
+        test(proxyList);
+        System.out.println("любые перегрузки метода add вызывались (в сумме) " + handler.getAddCount() + " раз/раза");
     }
 
-    public static void test(List<?> list) {
+    public static void test(List<String> list) {
+        list.add("a");
+        list.add("b");
+        list.add("c");
+
         System.out.println("Метод test получил список размером: " + list.size());
     }
 
@@ -29,6 +42,30 @@ public class Main {
 
         public int getAddCount() {
             return addCount;
+        }
+    }
+
+    static class AddCounterHandler implements InvocationHandler {
+
+        private final List<?> target;
+        private int addCount = 0;
+
+        public AddCounterHandler(List<?> target) {
+            this.target = target;
+        }
+
+        public int getAddCount() {
+            return addCount;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+            if (method.getName().equals("add")) {
+                addCount++;
+            }
+
+            return method.invoke(target, args);
         }
     }
 }
